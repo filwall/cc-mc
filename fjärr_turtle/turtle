@@ -15,6 +15,10 @@ while true do
         turtle.turnLeft()
     elseif message == "d" then
         turtle.turnRight()
+    elseif message == "f" then
+        turtle.dig()
+    elseif message == "r" then
+        turtle.refuel()
     elseif message == "x" then
         print("Stopping server.")
         break
