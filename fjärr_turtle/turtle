@@ -3,19 +3,19 @@ rednet.open("left") -- Öppnar modem för kommunikation
  
 while true do
     local senderId, message = rednet.receive() -- Väntar på meddelanden
-    if message == "forward" then
+    if message == "w" then
         turtle.forward()
-    elseif message == "back" then
+    elseif message == "s" then
         turtle.back()
-    elseif message == "up" then
+    elseif message == "e" then
         turtle.up()
-    elseif message == "down" then
+    elseif message == "c" then
         turtle.down()
-    elseif message == "left" then
+    elseif message == "a" then
         turtle.turnLeft()
-    elseif message == "right" then
+    elseif message == "d" then
         turtle.turnRight()
-    elseif message == "stop" then
+    elseif message == "x" then
         print("Stopping server.")
         break
     else
