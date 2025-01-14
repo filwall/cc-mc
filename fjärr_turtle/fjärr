@@ -1,0 +1,20 @@
+-- client.lua
+rednet.open("back") -- Öppnar modem för kommunikation
+ 
+print("Turtle Control Panel")
+print("Use commands: forward, back, up, down, left, right, stop")
+ 
+while true do
+    write("> ") -- Skriver prompt
+    local command = read() -- Väntar på användarinput
+ 
+    if command == "stop" then
+        print("Stopping client.")
+        rednet.broadcast("stop") -- Skickar 'stop' till alla turtles
+        break
+    else
+        rednet.broadcast(command) -- Skickar kommando till alla turtles
+    end
+end
+ 
+rednet.close() -- Stänger modem

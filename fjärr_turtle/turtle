@@ -1,0 +1,26 @@
+-- server.lua
+rednet.open("left") -- Öppnar modem för kommunikation
+ 
+while true do
+    local senderId, message = rednet.receive() -- Väntar på meddelanden
+    if message == "forward" then
+        turtle.forward()
+    elseif message == "back" then
+        turtle.back()
+    elseif message == "up" then
+        turtle.up()
+    elseif message == "down" then
+        turtle.down()
+    elseif message == "left" then
+        turtle.turnLeft()
+    elseif message == "right" then
+        turtle.turnRight()
+    elseif message == "stop" then
+        print("Stopping server.")
+        break
+    else
+        print("Unknown command: " .. message)
+    end
+end
+ 
+rednet.close() -- Stänger modem efter avslutad session
