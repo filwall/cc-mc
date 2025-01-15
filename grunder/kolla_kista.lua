@@ -21,7 +21,7 @@ if chest then
 
         -- Visa resultatet på monitoren
         monitor.setCursorPos(1, 1)
-        monitor.write("Totalt antal föremål i kistan: " .. totalItems)
+        monitor.write(totalItems)
     else
         print("Ingen monitor hittades!")
     end
