@@ -1,28 +1,31 @@
--- Hitta kistan
+-- Hitta en kista
 local chest = peripheral.find("minecraft:chest")
 
 if chest then
-    -- Skanna genom alla föremål i kistan
-    local items = chest.list()  -- Hämtar alla objekt i kistan
+    -- Hitta en ansluten monitor
+    local monitor = peripheral.find("monitor")
 
-    -- Sätt föremålet du vill kontrollera (t.ex. diamanten)
-    local itemName = "minecraft:diamond"
-    local itemCount = 0
+    if monitor then
+        monitor.clear()  -- Rensa skärmen
+        monitor.setTextScale(1)  -- Ställ in textstorlek (kan justeras för större eller mindre text)
 
-    -- Loop genom kistans objekt
-    for slot, item in pairs(items) do
-        if item.name == itemName then
-            itemCount = itemCount + item.count
+        -- Skanna föremålen i kistan
+        local items = chest.list()
+
+        local totalItems = 0
+
+        -- Gå igenom alla föremål i kistan och summera deras antal
+        for _, item in pairs(items) do
+            totalItems = totalItems + item.count
         end
-    end
 
-    -- Skriv ut resultatet
-    if itemCount > 0 then
-        print("Det finns " .. itemCount .. " diamanter i kistan.")
+        -- Visa resultatet på monitoren
+        monitor.setCursorPos(1, 1)
+        monitor.write("Totalt antal föremål i kistan: " .. totalItems)
     else
-        print("Inga diamanter hittades i kistan.")
+        print("Ingen monitor hittades!")
     end
 else
-    print("Ingen kista hittades i närheten.")
+    print("Ingen kista hittades!")
 end
 
