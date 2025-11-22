@@ -1,0 +1,47 @@
+local mon = peripheral.wrap("front")
+local pl  = peripheral.wrap("back")
+
+mon.setTextScale(1.5)
+
+while true do
+    local online = pl.getOnlinePlayers()
+    mon.clear()
+
+    -- Filip
+    mon.setCursorPos(1,1)
+    mon.write("Filip:")
+    if table.concat(online, " "):match("fladermus13") then
+      local pos_f = pl.getPlayerPos("fladermus13")
+      mon.setCursorPos(1,2)
+      mon.write("X:" .. pos_f.x .. " Y:" .. pos_f.y .. " Z:" .. pos_f.z)
+    else
+      mon.setCursorPos(1,2)
+      mon.write("Offline")
+    end
+
+    -- Viktor
+    mon.setCursorPos(1,4)
+    mon.write("Viktor:")
+    if table.concat(online, " "):match("Viktor1604") then
+      local pos_v = pl.getPlayerPos("Viktor1604")
+      mon.setCursorPos(1,5)
+      mon.write("X:" .. pos_v.x .. " Y:" .. pos_v.y .. " Z:" .. pos_v.z)
+    else
+      mon.setCursorPos(1,5)
+      mon.write("Offline")
+    end
+
+    -- Linus
+    mon.setCursorPos(1,7)
+    mon.write("Linus:")
+    if table.concat(online, " "):match("Epicexodia1337") then
+      local pos_l = pl.getPlayerPos("Epicexodia1337")
+      mon.setCursorPos(1,8)
+      mon.write("X:" .. pos_l.x .. " Y:" .. pos_l.y .. " Z:" .. pos_l.z)
+    else
+      mon.setCursorPos(1,8)
+      mon.write("Offline")
+    end
+    sleep(5)
+end
+

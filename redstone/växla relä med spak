@@ -1,0 +1,18 @@
+local modem = peripheral.find("modem")
+if not modem then error("Ingen modem funnen!") end
+
+local relayOut = "redstone_relay_1"  
+local sideIn = "left"  
+
+local lastState = redstone.getInput(sideIn)
+
+while true do
+  os.pullEvent("redstone")  
+  
+  local currentState = redstone.getInput(sideIn)
+  if currentState ~= lastState then
+    modem.callRemote(relayOut, "setOutput", "right", currentState)
+    lastState = currentState
+  end
+end
+
