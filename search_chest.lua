@@ -6,11 +6,6 @@
 --    2. Right-click each modem to activate it (turns green)
 --    3. Run this program on the central computer
 --
---  Controls:
---    Type / Backspace   -> Live search
---    Click buttons      -> Refresh / Rename / Quit
---    F5 / F2 / Esc      -> Same via keyboard
--- ============================================================
 
 local LABEL_FILE = "chestnet_labels.json"
 local isAdv = term.isColor and term.isColor()
@@ -160,6 +155,24 @@ end
 
 -- ── Search ────────────────────────────────────────────────────
 
+-- Relevance score (lower = better match):
+--   0  exact display name match        "Book"         query "book"
+--   1  display name starts with query  "Book and Quill"
+--   2  item ID ends with query         "minecraft:book"
+--   3  word boundary in display name   "Pocket Book"
+--   4  anywhere in display name        "Enchanted Book"
+--   5  only matches item ID            "minecraft:bookshelf"
+local function matchScore(item, q)
+    local dn = item.displayName:lower()
+    local id = item.name:lower()
+    if dn == q then return 0 end
+    if dn:sub(1, #q) == q then return 1 end
+    if id:match(":(.-)$") == q then return 2 end
+    if dn:find("%s"..q) or dn:find("_"..q) then return 3 end
+    if dn:find(q, 1, true) then return 4 end
+    return 5
+end
+
 local function searchItems(data, query)
     if query == "" then return {} end
     local q = query:lower()
@@ -175,13 +188,17 @@ local function searchItems(data, query)
                     displayName = item.displayName,
                     count       = item.count,
                     slot        = item.slot,
+                    score       = matchScore(item, q),
                 })
             end
         end
     end
     table.sort(results, function(a, b)
-        if a.label ~= b.label then return a.label < b.label end
-        return a.displayName < b.displayName
+        if a.score ~= b.score then return a.score < b.score end
+        if a.displayName:lower() ~= b.displayName:lower() then
+            return a.displayName:lower() < b.displayName:lower()
+        end
+        return a.label < b.label
     end)
     return results
 end
