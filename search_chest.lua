@@ -6,8 +6,14 @@
 --    2. Right-click each modem to activate it (turns green)
 --    3. Run this program on the central computer
 --
+--  Controls:
+--    Type / Backspace   -> Live search
+--    Click buttons      -> Refresh / Rename / Quit
+--    F5 / F2 / Esc      -> Same via keyboard
+-- ============================================================
 
-local LABEL_FILE = "chestnet_labels.json"
+local LABEL_FILE  = "chestnet_labels.json"
+local CACHE_FILE  = "chestnet_cache.json"
 local isAdv = term.isColor and term.isColor()
 
 local C = {
@@ -99,13 +105,16 @@ local function getLabel(name) return labels[name] or name end
 -- ── Chest discovery ───────────────────────────────────────────
 
 local function findInventories()
+    local SIDES={left=true,right=true,top=true,bottom=true,front=true,back=true}
     local found = {}
     for _, name in ipairs(peripheral.getNames()) do
-        local t = peripheral.getType(name) or ""
-        if not t:find("modem") and not t:find("computer") and not t:find("turtle") then
-            local p = peripheral.wrap(name)
-            if p and type(p.list) == "function" then
-                table.insert(found, name)
+        if not SIDES[name] then
+            local t = peripheral.getType(name) or ""
+            if not t:find("modem") and not t:find("computer") and not t:find("turtle") then
+                local p = peripheral.wrap(name)
+                if p and type(p.list) == "function" then
+                    table.insert(found, name)
+                end
             end
         end
     end
@@ -113,7 +122,29 @@ local function findInventories()
     return found
 end
 
--- ── Scanning ──────────────────────────────────────────────────
+-- ── Display name from item ID (no network call needed) ────────
+-- "minecraft:iron_ingot" -> "Iron Ingot"
+-- "create:brass_ingot"   -> "Brass Ingot"
+local function makeDisplayName(itemName)
+    local base = itemName:match(":(.+)$") or itemName
+    base = base:gsub("_", " ")
+    return base:gsub("(%a)([%w]*)", function(a, b)
+        return a:upper() .. b:lower()
+    end)
+end
+
+-- Items where the display name carries important info (NBT-based names).
+-- For these we call getItemDetail. For everything else we use the fast path.
+local NEEDS_DETAIL = {
+    ["minecraft:enchanted_book"]    = true,
+    ["minecraft:potion"]            = true,
+    ["minecraft:splash_potion"]     = true,
+    ["minecraft:lingering_potion"]  = true,
+    ["minecraft:tipped_arrow"]      = true,
+    ["minecraft:written_book"]      = true,
+}
+
+-- ── Scanning (getItemDetail only where it matters) ────────────
 
 local function scanChest(name)
     local p = peripheral.wrap(name)
@@ -122,11 +153,13 @@ local function scanChest(name)
     if not ok or not list then return {} end
     local items = {}
     for slot, item in pairs(list) do
-        local displayName = item.name
-        pcall(function()
-            local d = p.getItemDetail(slot)
-            if d and d.displayName then displayName = d.displayName end
-        end)
+        local displayName = makeDisplayName(item.name)
+        if NEEDS_DETAIL[item.name] then
+            pcall(function()
+                local d = p.getItemDetail(slot)
+                if d and d.displayName then displayName = d.displayName end
+            end)
+        end
         table.insert(items, {
             name        = item.name,
             displayName = displayName,
@@ -135,6 +168,24 @@ local function scanChest(name)
         })
     end
     return items
+end
+
+-- ── Cache: save/load scan results ────────────────────────────
+
+local function saveCache(data, time, numChests)
+    local f = fs.open(CACHE_FILE, "w")
+    f.write(textutils.serialiseJSON({ time=time, chests=numChests, data=data }))
+    f.close()
+end
+
+local function loadCache()
+    if not fs.exists(CACHE_FILE) then return nil, nil end
+    local f = fs.open(CACHE_FILE, "r")
+    local content = f.readAll()
+    f.close()
+    local ok, d = pcall(textutils.unserialiseJSON, content)
+    if ok and d and d.data then return d.data, d.time end
+    return nil, nil
 end
 
 local function scanAll(inventories)
@@ -271,7 +322,7 @@ local function drawScreen(query, results, numChests, refreshTime)
             end
             local g = grouped[chest]
             term.setCursorPos(1, row)
-            twrite("  \16 ", C.chest)
+            twrite("  > ", C.chest)
             twrite(getLabel(chest), C.chest)
             twrite("  " .. g.total .. " item(s)", C.count)
             row = row + 1
@@ -360,20 +411,35 @@ if #inventories == 0 then
     return
 end
 
+local REFRESH_INTERVAL = 30  -- auto-refresh every 30 seconds
+
 tprint(#inventories .. " chest(s) found! Scanning...", C.found)
 tprint("")
 
 local cache       = scanAll(inventories)
 local refreshTime = os.date("%H:%M:%S")
+saveCache(cache, refreshTime, #inventories)
 local query       = ""
 local results     = {}
 
 drawScreen(query, results, #inventories, refreshTime)
 
+local refreshTimer = os.startTimer(REFRESH_INTERVAL)
+
 while true do
     local event, p1, p2, p3 = os.pullEvent()
 
-    if event == "char" then
+    if event == "timer" and p1 == refreshTimer then
+        -- Auto-refresh every 30 seconds
+        inventories = findInventories()
+        cache = scanAll(inventories)
+        refreshTime = os.date("%H:%M:%S")
+        saveCache(cache, refreshTime, #inventories)
+        results = searchItems(cache, query)
+        drawScreen(query, results, #inventories, refreshTime)
+        refreshTimer = os.startTimer(REFRESH_INTERVAL)
+
+    elseif event == "char" then
         query = query .. p1
         results = searchItems(cache, query)
         drawScreen(query, results, #inventories, refreshTime)
@@ -390,8 +456,10 @@ while true do
             inventories = findInventories()
             cache = scanAll(inventories)
             refreshTime = os.date("%H:%M:%S")
+            saveCache(cache, refreshTime, #inventories)
             results = searchItems(cache, query)
             drawScreen(query, results, #inventories, refreshTime)
+            refreshTimer = os.startTimer(REFRESH_INTERVAL)
         elseif p1 == keys.f2 then
             flashButton("label")
             renameMenu(inventories)
@@ -406,8 +474,10 @@ while true do
             inventories = findInventories()
             cache = scanAll(inventories)
             refreshTime = os.date("%H:%M:%S")
+            saveCache(cache, refreshTime, #inventories)
             results = searchItems(cache, query)
             drawScreen(query, results, #inventories, refreshTime)
+            refreshTimer = os.startTimer(REFRESH_INTERVAL)
         elseif action == "label" then
             flashButton("label")
             renameMenu(inventories)
