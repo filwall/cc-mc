@@ -1,11 +1,16 @@
-local stationId = 14
-local apiURL = "https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/1/station/"
+-- SMHI temperatursensor för CC:Tweaked
+-- Byt stationId vid behov:
+--   71420 = Göteborg A      (~45 km, SMHI CORE, pålitlig)
+-- Lista alla stationer: opendata-download-metobs.smhi.se/api/version/latest/parameter/1.json
+local stationId = 71420
+
+local apiURL = "https://opendata-download-metobs.smhi.se/api/version/latest/parameter/1/station/"
                .. tostring(stationId) .. "/period/latest-hour/data.json"
 
 local function fetchAndPrint()
   local response = http.get(apiURL)
   if not response then
-    print("Fel: kunde inte hämta data")
+    print("Fel: kunde inte ansluta till SMHI")
     return
   end
 
@@ -13,24 +18,23 @@ local function fetchAndPrint()
   response.close()
 
   local ok, data = pcall(textutils.unserializeJSON, body)
-  if not ok or not data then
+  if not ok or type(data) ~= "table" then
     print("Fel vid JSON-tolkning:")
     print(body)
     return
   end
 
-  if data.value then
-    local n = #data.value
-    if n > 0 and data.value[n].value then
-      local temp = tonumber(data.value[n].value)
-      if temp then
-        print("Alingsas: " .. tostring(temp) .. " grader")
-        return
-      end
+  if type(data.value) == "table" and #data.value > 0 then
+    local latest = data.value[#data.value]
+    local temp = latest and tonumber(latest.value)
+    if temp then
+      local stationName = (data.station and data.station.name) or ("Station " .. stationId)
+      print(stationName .. ": " .. tostring(temp) .. " grader")
+      return
     end
   end
 
-  print("Kunde inte hitta temperatur i JSON:")
+  print("Ingen temperaturdata hittades:")
   print(body)
 end
 
